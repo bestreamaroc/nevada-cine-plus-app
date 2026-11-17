@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>NEVADA CINE PLUS — powered by BE STREAM</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <style>
+    * { box-sizing: border-box; outline: none; }
+    body { background: #070b14; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; overflow: hidden; user-select: none; }
+    .tv-focus:focus { transform: scale(1.04); border-color: #ef4444 !important; box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.5); background: #1e293b; }
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+  </style>
+</head>
+<body class="h-screen w-screen flex flex-col">
+
+  <!-- الشريط العلوي -->
+  <header class="h-16 px-6 bg-slate-950/90 border-b border-slate-800 flex items-center justify-between shrink-0">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-red-600 to-amber-500 flex items-center justify-center font-black text-white text-lg shadow-lg">N+</div>
+      <div>
+        <h1 class="text-lg font-extrabold tracking-wide text-white leading-none">NEVADA CINE PLUS</h1>
+        <span class="text-[11px] text-amber-400 font-semibold tracking-wider">POWERED BY BE STREAM</span>
+      </div>
+    </div>
+
+    <!-- أزرار الأقسام الرئيسية -->
+    <nav class="flex items-center gap-3">
+      <button tabindex="0" onclick="switchTab('live')" id="tab-live" class="tv-focus px-5 py-2 rounded-lg bg-red-600 text-white font-bold text-sm border border-transparent transition">البث المباشر</button>
+      <button tabindex="0" onclick="switchTab('vod')" id="tab-vod" class="tv-focus px-5 py-2 rounded-lg bg-slate-800 text-slate-200 font-bold text-sm border border-transparent transition">الأفلام</button>
+      <button tabindex="0" onclick="switchTab('series')" id="tab-series" class="tv-focus px-5 py-2 rounded-lg bg-slate-800 text-slate-200 font-bold text-sm border border-transparent transition">المسلسلات</button>
+      <button tabindex="0" onclick="toggleSettings()" class="tv-focus px-4 py-2 rounded-lg bg-slate-900 text-slate-300 text-sm border border-slate-700 transition">⚙️ السيرفر</button>
+    </nav>
+
+    <div class="text-left">
+      <div id="clock" class="text-base font-bold text-slate-200">00:00</div>
+      <div id="status-badge" class="text-[11px] text-emerald-400">متصل بسيرفر BE STREAM</div>
+    </div>
+  </header>
+
+  <!-- المحتوى الرئيسي -->
+  <main class="flex-1 flex overflow-hidden">
+    <!-- عمود التصنيفات -->
+    <aside id="categories-list" class="w-64 bg-slate-900/80 border-l border-slate-800 overflow-y-auto p-3 space-y-1.5 shrink-0">
+      <div class="text-xs text-slate-400 px-2 py-1">جاري تحميل الباقات...</div>
+    </aside>
+
+    <!-- عمود القنوات / المحتوى -->
+    <section id="items-list" class="w-80 bg-slate-950/60 border-l border-slate-800 overflow-y-auto p-3 space-y-2 shrink-0">
+      <div class="text-xs text-slate-400 px-2 py-1">اختر باقة لعرض القنوات</div>
+    </section>
+
+    <!-- شاشة المشغل -->
+    <section class="flex-1 bg-black relative flex flex-col justify-center items-center">
+      <video id="video-player" class="w-full h-full object-contain bg-black" controls autoplay playsinline></video>
+      <div id="player-overlay" class="absolute bottom-4 right-4 bg-slate-950/85 border border-slate-800 px-4 py-2 rounded-xl pointer-events-none">
+        <div id="now-playing-title" class="text-sm font-bold text-white">جاهز للبث — اختر قناة أو فيلماً</div>
+        <div class="text-xs text-slate-400">استخدم أسهم الريموت للتنقل و OK للتشغيل</div>
+      </div>
+    </section>
+  </main>
+
+  <!-- نافذة إعدادات السيرفر -->
+  <div id="settings-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-md space-y-4">
+      <h2 class="text-lg font-bold text-white">بيانات سيرفر BE STREAM</h2>
+      <div>
+        <label class="text-xs text-slate-400 block mb-1">رابط السيرفر (Host URL)</label>
+        <input id="inp-host" type="text" class="tv-focus w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-sm text-white" dir="ltr" />
+      </div>
+      <div>
+        <label class="text-xs text-slate-400 block mb-1">اسم المستخدم (Username)</label>
+        <input id="inp-user" type="text" class="tv-focus w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-sm text-white" dir="ltr" />
+      </div>
+      <div>
+        <label class="text-xs text-slate-400 block mb-1">كلمة المرور (Password)</label>
+        <input id="inp-pass" type="text" class="tv-focus w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-sm text-white" dir="ltr" />
+      </div>
+      <div class="flex justify-end gap-3 pt-2">
+        <button tabindex="0" onclick="toggleSettings()" class="tv-focus px-4 py-2 rounded-lg bg-slate-800 text-sm">إغلاق</button>
+        <button tabindex="0" onclick="saveServer()" class="tv-focus px-5 py-2 rounded-lg bg-red-600 text-white font-bold text-sm">حفظ وتحديث</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const DEFAULT_CFG = {
+      host: "http://151535216079.4k-v2-2026.live:80",
+      user: "a5zwd8o75q",
+      pass: "oqh9qvcdal"
+    };
+
+    let cfg = JSON.parse(localStorage.getItem("nevada_cfg")) || DEFAULT_CFG;
+    let currentTab = "live";
+    let hls = null;
+
+    setInterval(() => {
+      const now = new Date();
+      document.getElementById("clock").textContent = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    }, 1000);
+
+    function toggleSettings() {
+      const m = document.getElementById("settings-modal");
+      m.classList.toggle("hidden");
+      if (!m.classList.contains("hidden")) {
+        document.getElementById("inp-host").value = cfg.host;
+        document.getElementById("inp-user").value = cfg.user;
+        document.getElementById("inp-pass").value = cfg.pass;
+      }
+    }
+
+    function saveServer() {
+      cfg = {
+        host: document.getElementById("inp-host").value.trim().replace(/\/$/, ""),
+        user: document.getElementById("inp-user").value.trim(),
+        pass: document.getElementById("inp-pass").value.trim()
+      };
+      localStorage.setItem("nevada_cfg", JSON.stringify(cfg));
+      toggleSettings();
+      switchTab(currentTab);
+    }
+
+    async function switchTab(tab) {
+      currentTab = tab;
+      ["live", "vod", "series"].forEach(t => {
+        const el = document.getElementById("tab-" + t);
+        el.className = t === tab
+          ? "tv-focus px-5 py-2 rounded-lg bg-red-600 text-white font-bold text-sm border border-transparent transition"
+          : "tv-focus px-5 py-2 rounded-lg bg-slate-800 text-slate-200 font-bold text-sm border border-transparent transition";
+      });
+
+      const action = tab === "live" ? "get_live_categories" : tab === "vod" ? "get_vod_categories" : "get_series_categories";
+      const catBox = document.getElementById("categories-list");
+      catBox.innerHTML = '<div class="text-xs text-slate-400 p-2">جاري التحميل...</div>';
+
+      try {
+        const res = await fetch(`${cfg.host}/player_api.php?username=${cfg.user}&password=${cfg.pass}&action=${action}`);
+        const data = await res.json();
+        catBox.innerHTML = "";
+        data.forEach((cat, idx) => {
+          const btn = document.createElement("button");
+          btn.tabIndex = 0;
+          btn.className = "tv-focus w-full text-right px-3 py-2.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 text-sm text-slate-200 border border-transparent truncate transition";
+          btn.textContent = cat.category_name;
+          btn.onclick = () => loadItems(cat.category_id);
+          catBox.appendChild(btn);
+          if (idx === 0) loadItems(cat.category_id);
+        });
+      } catch (e) {
+        catBox.innerHTML = '<div class="text-xs text-red-400 p-2">تعذر الاتصال بالسيرفر، تأكد من الإنترنت أو إعدادات السيرفر.</div>';
+      }
+    }
+
+    async function loadItems(catId) {
+      const action = currentTab === "live" ? "get_live_streams" : currentTab === "vod" ? "get_vod_streams" : "get_series";
+      const itemBox = document.getElementById("items-list");
+      itemBox.innerHTML = '<div class="text-xs text-slate-400 p-2">جاري جلب القائمة...</div>';
+
+      try {
+        const res = await fetch(`${cfg.host}/player_api.php?username=${cfg.user}&password=${cfg.pass}&action=${action}&category_id=${catId}`);
+        const data = await res.json();
+        itemBox.innerHTML = "";
+        data.slice(0, 150).forEach(item => {
+          const btn = document.createElement("button");
+          btn.tabIndex = 0;
+          btn.className = "tv-focus w-full text-right px-3 py-2.5 rounded-lg bg-slate-900 border border-slate-800/80 text-sm text-slate-100 flex items-center gap-2.5 transition";
+          const title = item.name || item.title;
+          btn.innerHTML = `<span class="w-2 h-2 rounded-full bg-red-500 shrink-0"></span><span class="truncate">${title}</span>`;
+          btn.onclick = () => playStream(item);
+          itemBox.appendChild(btn);
+        });
+      } catch (e) {
+        itemBox.innerHTML = '<div class="text-xs text-red-400 p-2">خطأ في تحميل القنوات</div>';
+      }
+    }
+
+    function playStream(item) {
+      const title = item.name || item.title;
+      document.getElementById("now-playing-title").textContent = title;
+      const video = document.getElementById("video-player");
+
+      let streamUrl = "";
+      if (currentTab === "live") {
+        streamUrl = `${cfg.host}/live/${cfg.user}/${cfg.pass}/${item.stream_id}.m3u8`;
+      } else if (currentTab === "vod") {
+        const ext = item.container_extension || "mp4";
+        streamUrl = `${cfg.host}/movie/${cfg.user}/${cfg.pass}/${item.stream_id}.${ext}`;
+      } else {
+        document.getElementById("now-playing-title").textContent = title + " (اختر حلقة من السيرفر)";
+        return;
+      }
+
+      if (hls) { hls.destroy(); hls = null; }
+      if (streamUrl.endsWith(".m3u8") && Hls.isSupported()) {
+        hls = new Hls();
+        hls.loadSource(streamUrl);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
+      } else {
+        video.src = streamUrl;
+        video.play();
+      }
+    }
+
+    // دعم التنقل بالريموت كنترول (D-Pad)
+    document.addEventListener("keydown", (e) => {
+      const focusables = Array.from(document.querySelectorAll(".tv-focus"));
+      const idx = focusables.indexOf(document.activeElement);
+      if (e.key === "ArrowDown" && idx > -1 && idx < focusables.length - 1) {
+        e.preventDefault();
+        focusables[idx + 1].focus();
+      } else if (e.key === "ArrowUp" && idx > 0) {
+        e.preventDefault();
+        focusables[idx - 1].focus();
+      }
+    });
+
+    window.onload = () => {
+      switchTab("live");
+      document.getElementById("tab-live").focus();
+    };
+  </script>
+</body>
+</html>
