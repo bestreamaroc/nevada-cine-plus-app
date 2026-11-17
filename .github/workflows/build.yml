@@ -1,4 +1,4 @@
-name: Build NEVADA CINE PLUS APK
+name: Build NEVADA CINE PLUS APK v2
 
 on:
   push:
@@ -26,13 +26,15 @@ jobs:
       - name: Install Cordova
         run: npm install -g cordova
 
-      - name: Create Cordova Android TV App
+      - name: Create Clean Cordova Android TV App
         run: |
-          cordova create app_build com.bestream.nevadacineplus "NEVADA CINE PLUS"
+          rm -rf app_build
+          cordova create app_build com.bestream.nevadacineplus.v2 "NEVADA CINE PLUS"
+          rm -rf app_build/www/*
           cp index.html app_build/www/index.html
           cat << 'EOF' > app_build/config.xml
           <?xml version='1.0' encoding='utf-8'?>
-          <widget id="com.bestream.nevadacineplus" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:android="http://schemas.android.com/apk/res/android">
+          <widget id="com.bestream.nevadacineplus.v2" version="2.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:android="http://schemas.android.com/apk/res/android">
               <name>NEVADA CINE PLUS</name>
               <description>NEVADA CINE PLUS powered by BE STREAM</description>
               <author email="support@bestram.live" href="https://bestram.live">BE STREAM</author>
@@ -56,5 +58,5 @@ jobs:
       - name: Upload NEVADA CINE PLUS APK
         uses: actions/upload-artifact@v4
         with:
-          name: NEVADA-CINE-PLUS-APK
+          name: NEVADA-CINE-PLUS-V2-APK
           path: app_build/platforms/android/app/build/outputs/apk/debug/app-debug.apk
